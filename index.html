@@ -327,6 +327,14 @@ svg.diag{width:100%;border-radius:var(--rsm);display:block;margin:8px 0}
         <span class="unit">pzas</span>
       </div>
     </div>
+    <div class="field">
+      <label class="field-label">Profundidad del L-drop — caída interior (cm)</label>
+      <div class="field-row">
+        <input type="range" min="1" max="20" value="7" id="p-drop-sl" oninput="syncN('p-drop-sl','p-drop');calcP()">
+        <input type="number" class="num" id="p-drop" value="7" oninput="syncSl('p-drop','p-drop-sl');calcP()">
+        <span class="unit">cm</span>
+      </div>
+    </div>
     <div id="p-largo-warn" style="display:none"></div>
   </div>
 
@@ -604,9 +612,10 @@ function setConvex(v,el){
 function calcP(){
   const R=+$('p-R').value||27.7;
   const W=+$('p-W').value||50;
-  const L=+$('p-L').value||60; // largo loseta en cm
+  const L=+$('p-L').value||60;
   const A=+$('p-A').value||60.8;
   const N=+$('p-N').value||3;
+  const drop=+$('p-drop').value||7;
   const Ro=R+W;
   const apa=A/N;
   const cut=apa/2;
@@ -616,28 +625,45 @@ function calcP(){
   const diff=oc-ic;
   const arcI=R*(A*Math.PI/180)*10; // mm inner arc
 
-  // Validate outer chord vs tile length
-  const warn=$('p-largo-warn');
+  // Sagitta of each piece's inner chord
+  const icCm=ic/10;
+  const sagitta=R-Math.sqrt(Math.max(0,R*R-(icCm/2)*(icCm/2)));
+  const sagittaOk=sagitta<drop*0.15; // safe limit: <15% of L-drop
+
+  // Outer chord vs tile length
   const ocCm=oc/10;
-  if(ocCm>L){
-    // Find minimum N that fits
-    let minN=N;
-    for(let n=N;n<=20;n++){
-      const oc_n=2*Ro*Math.sin((A/n/2)*Math.PI/180)*10/10;
-      if(oc_n<=L){minN=n;break;}
-    }
-    warn.style.display='block';
-    warn.className='tip';
-    warn.innerHTML=`<b>⚠️ La cuerda exterior (${ocCm.toFixed(0)} cm) supera el largo de la loseta (${L} cm).</b><br>
-    La pieza no cabe. Aumenta el nº de piezas a <b>${minN}</b> como mínimo.
-    <button class="chip" style="margin-left:8px;margin-top:4px" onclick="$('p-N').value=${minN};syncSl('p-N','p-N-sl');calcP()">→ Usar ${minN} piezas</button>`;
-  } else {
-    warn.style.display='block';
-    warn.className='ok';
-    warn.innerHTML=`✓ La cuerda exterior (${ocCm.toFixed(0)} cm) cabe en la loseta de ${L} cm de largo`;
+  const largoOk=ocCm<=L;
+
+  // Find minimum safe N (sagitta and largo)
+  let minN=N;
+  for(let n=2;n<=20;n++){
+    const ic_n=2*R*Math.sin((A/n/2)*Math.PI/180);
+    const oc_n=2*Ro*Math.sin((A/n/2)*Math.PI/180);
+    const sag_n=R-Math.sqrt(Math.max(0,R*R-(ic_n/2)*(ic_n/2)));
+    if(sag_n<drop*0.15&&oc_n<=L){minN=n;break;}
   }
 
-  state={...state,R,W,L,A,N,cut,convex:isConvex};
+  const warn=$('p-largo-warn');
+  warn.style.display='block';
+  if(!sagittaOk){
+    warn.className='tip';
+    warn.innerHTML=`<b>⚠️ El L-drop chocará al colocar la pieza.</b><br>
+    Sagitta por pieza = <b>${sagitta.toFixed(1)} cm</b> (límite seguro: ${(drop*0.15).toFixed(1)} cm).<br>
+    Con N=${N} las piezas son demasiado anchas angularmente — el drop de ${drop}cm no puede bajar sin chocar con la pared.<br>
+    Mínimo de piezas para poder colocarlas: <b>${minN}</b>
+    <button class="chip" style="margin-left:6px;margin-top:4px" onclick="$('p-N').value=${minN};syncSl('p-N','p-N-sl');calcP()">→ Usar ${minN} piezas</button>`;
+  } else if(!largoOk){
+    warn.className='tip';
+    warn.innerHTML=`<b>⚠️ La cuerda exterior (${ocCm.toFixed(0)} cm) supera el largo de la loseta (${L} cm).</b><br>
+    Aumenta el nº de piezas. Mínimo: <b>${minN}</b>
+    <button class="chip" style="margin-left:6px;margin-top:4px" onclick="$('p-N').value=${minN};syncSl('p-N','p-N-sl');calcP()">→ Usar ${minN} piezas</button>`;
+  } else {
+    warn.className='ok';
+    warn.innerHTML=`✓ Sagitta por pieza: <b>${sagitta.toFixed(2)} cm</b> — las piezas se pueden colocar sin que el L-drop choque.<br>
+    ✓ Cuerda exterior: <b>${ocCm.toFixed(0)} cm</b> — cabe en la loseta de ${L} cm.`;
+  }
+
+  state={...state,R,W,L,A,N,drop,cut,convex:isConvex};
   $('p-results').style.display='block';
 
   const innerLabel=isConvex?'Lado piscina (corto)':'Lado terraza (corto)';
@@ -653,18 +679,17 @@ function calcP(){
 
   let rows='';
   for(let i=0;i<N;i++){
-    const fits=ocCm<=L;
     rows+=`<tr>
       <td><b>${i+1}</b></td>
       <td>${Math.round(ic)} mm</td>
-      <td style="color:${fits?'inherit':'#B71C1C'};font-weight:${fits?400:700}">${Math.round(oc)} mm ${fits?'':'⚠️'}</td>
+      <td style="color:${largoOk?'inherit':'#B71C1C'};font-weight:${largoOk?400:700}">${Math.round(oc)} mm${largoOk?'':' ⚠️'}</td>
       <td>${Math.round(diff)} mm</td>
       <td>${cut.toFixed(2)}°</td>
     </tr>`;
   }
   $('p-tbody').innerHTML=rows;
 
-  $('p-tip').innerHTML=`<b>Todas las piezas son idénticas.</b> Arco interior total: ${(arcI/10).toFixed(1)} cm · Loseta: ${W*10}×${L*10} mm`;
+  $('p-tip').innerHTML=`<b>Sagitta por pieza: ${sagitta.toFixed(2)} cm</b> · Arco interior total: ${(arcI/10).toFixed(1)} cm · Loseta: ${W*10}×${L*10} mm`;
 
   drawPiezas(R,W,A,N);
 }
