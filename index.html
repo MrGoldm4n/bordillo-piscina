@@ -197,13 +197,20 @@ svg.diag{width:100%;border-radius:var(--rsm);display:block;margin:8px 0}
       </div>
     </div>
 
-    <div class="res-big" id="res-radio">
-      <div class="res-num" id="r-result">—</div>
-      <div class="res-lbl">Radio interior R</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0">
+      <div class="res-big" style="margin:0">
+        <div class="res-num" id="r-result">—</div>
+        <div class="res-lbl">Radio interior R</div>
+      </div>
+      <div class="res-big" style="margin:0;background:linear-gradient(135deg,#1B5E20,#2E7D32)">
+        <div class="res-num" id="r-angle-result">—</div>
+        <div class="res-lbl">Ángulo A (desde C y R)</div>
+      </div>
     </div>
+    <div class="ok" id="r-consistency" style="display:none"></div>
     <div class="err" id="r-err"></div>
-
-    <button class="btn btn-green" onclick="useRadio()">✓ Usar este radio en Piezas →</button>
+    <div class="tip" style="margin-bottom:8px"><b>⚠️ Importante:</b> Usa siempre el ángulo calculado aquí (desde C y R) — es el más fiable. El ángulo medido en obra con L1/L2 puede tener error.</div>
+    <button class="btn btn-green" onclick="useRadio()">✓ Usar R y Ángulo en Piezas →</button>
   </div>
 
 </div>
@@ -283,13 +290,13 @@ svg.diag{width:100%;border-radius:var(--rsm);display:block;margin:8px 0}
     <div class="field">
       <label class="field-label">Radio interior R (cm) <span id="p-R-tag" style="color:var(--blue);font-size:10px"></span></label>
       <div class="field-row">
-        <input type="range" min="30" max="600" value="276" id="p-R-sl" oninput="syncN('p-R-sl','p-R');calcP()">
-        <input type="number" class="num" id="p-R" value="276" oninput="syncSl('p-R','p-R-sl');calcP()">
+        <input type="range" min="5" max="600" value="27.7" id="p-R-sl" oninput="syncN('p-R-sl','p-R');calcP()">
+        <input type="number" class="num" id="p-R" value="27.7" oninput="syncSl('p-R','p-R-sl');calcP()">
         <span class="unit">cm</span>
       </div>
     </div>
     <div class="field">
-      <label class="field-label">Ancho de la loseta (cm)</label>
+      <label class="field-label">Ancho de la loseta — de piscina a terraza (cm)</label>
       <div class="field-row">
         <input type="range" min="20" max="100" value="50" id="p-W-sl" oninput="syncN('p-W-sl','p-W');calcP()">
         <input type="number" class="num" id="p-W" value="50" oninput="syncSl('p-W','p-W-sl');calcP()">
@@ -297,21 +304,30 @@ svg.diag{width:100%;border-radius:var(--rsm);display:block;margin:8px 0}
       </div>
     </div>
     <div class="field">
-      <label class="field-label">Ángulo de giro total <span id="p-A-tag" style="color:var(--blue);font-size:10px"></span></label>
+      <label class="field-label">Largo de la loseta — a lo largo del borde (cm)</label>
       <div class="field-row">
-        <input type="range" min="5" max="180" value="56" id="p-A-sl" oninput="syncN('p-A-sl','p-A');calcP()">
-        <input type="number" class="num" id="p-A" value="56" oninput="syncSl('p-A','p-A-sl');calcP()">
+        <input type="range" min="20" max="150" value="60" id="p-L-sl" oninput="syncN('p-L-sl','p-L');calcP()">
+        <input type="number" class="num" id="p-L" value="60" oninput="syncSl('p-L','p-L-sl');calcP()">
+        <span class="unit">cm</span>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Ángulo de giro total <span id="p-A-tag" style="color:var(--green);font-size:10px;font-weight:700"></span></label>
+      <div class="field-row">
+        <input type="range" min="5" max="180" value="60.8" id="p-A-sl" oninput="syncN('p-A-sl','p-A');calcP()">
+        <input type="number" class="num" id="p-A" value="60.8" oninput="syncSl('p-A','p-A-sl');calcP()">
         <span class="unit">°</span>
       </div>
     </div>
     <div class="field">
       <label class="field-label">Número de piezas</label>
       <div class="field-row">
-        <input type="range" min="2" max="12" value="6" id="p-N-sl" oninput="syncN('p-N-sl','p-N');calcP()">
-        <input type="number" class="num" id="p-N" value="6" oninput="syncSl('p-N','p-N-sl');calcP()">
+        <input type="range" min="2" max="12" value="3" id="p-N-sl" oninput="syncN('p-N-sl','p-N');calcP()">
+        <input type="number" class="num" id="p-N" value="3" oninput="syncSl('p-N','p-N-sl');calcP()">
         <span class="unit">pzas</span>
       </div>
     </div>
+    <div id="p-largo-warn" style="display:none"></div>
   </div>
 
   <div class="card" id="p-results" style="display:none">
@@ -478,21 +494,31 @@ function initRadioChips(){
 
 function calcR(){
   const C=+$('r-C').value,S=+$('r-S').value;
-  if(!C||!S||S<=0){$('r-result').textContent='—';$('r-err').textContent='';return}
+  $('r-err').textContent='';$('r-consistency').style.display='none';
+  if(!C||!S||S<=0){$('r-result').textContent='—';$('r-angle-result').textContent='—';return}
   if(C<=0){$('r-err').textContent='C debe ser mayor que 0';return}
   const R=(C*C)/(8*S)+S/2;
   $('r-result').textContent=R.toFixed(1)+' cm';
-  $('r-err').textContent='';
-  state.R=R;
+  // Angle derived from C and R — always consistent
+  const ratio=C/(2*R);
+  if(ratio>1){$('r-err').textContent='Error: C no puede ser mayor que 2×R';return}
+  const A=2*Math.asin(Math.min(ratio,1))*180/Math.PI;
+  $('r-angle-result').textContent=A.toFixed(1)+'°';
+  $('r-consistency').style.display='block';
+  $('r-consistency').textContent=`✓ Arco interior real = ${(R*A*Math.PI/180).toFixed(1)} cm (la longitud real que deben cubrir las piezas)`;
+  state.R=R;state.A=A;
 }
 
 function useRadio(){
-  const v=+$('r-C').value; if(!v)return;
   const C=+$('r-C').value,S=+$('r-S').value;
+  if(!C||!S)return;
   const R=(C*C)/(8*S)+S/2;
+  const A=2*Math.asin(Math.min(C/(2*R),1))*180/Math.PI;
   $('p-R').value=R.toFixed(1);syncSl('p-R','p-R-sl');
+  $('p-A').value=A.toFixed(1);syncSl('p-A','p-A-sl');
   $('p-R-tag').textContent='← desde Radio';
-  state.R=R;calcP();showTab(2);
+  $('p-A-tag').textContent='← calculado desde C y R ✓';
+  state.R=R;state.A=A;calcP();showTab(2);
 }
 
 // ── TAB 1: ÁNGULO ──
@@ -576,10 +602,11 @@ function setConvex(v,el){
 }
 
 function calcP(){
-  const R=+$('p-R').value||276;
+  const R=+$('p-R').value||27.7;
   const W=+$('p-W').value||50;
-  const A=+$('p-A').value||56;
-  const N=+$('p-N').value||6;
+  const L=+$('p-L').value||60; // largo loseta en cm
+  const A=+$('p-A').value||60.8;
+  const N=+$('p-N').value||3;
   const Ro=R+W;
   const apa=A/N;
   const cut=apa/2;
@@ -589,11 +616,30 @@ function calcP(){
   const diff=oc-ic;
   const arcI=R*(A*Math.PI/180)*10; // mm inner arc
 
-  state={...state,R,W,A,N,cut,convex:isConvex};
+  // Validate outer chord vs tile length
+  const warn=$('p-largo-warn');
+  const ocCm=oc/10;
+  if(ocCm>L){
+    // Find minimum N that fits
+    let minN=N;
+    for(let n=N;n<=20;n++){
+      const oc_n=2*Ro*Math.sin((A/n/2)*Math.PI/180)*10/10;
+      if(oc_n<=L){minN=n;break;}
+    }
+    warn.style.display='block';
+    warn.className='tip';
+    warn.innerHTML=`<b>⚠️ La cuerda exterior (${ocCm.toFixed(0)} cm) supera el largo de la loseta (${L} cm).</b><br>
+    La pieza no cabe. Aumenta el nº de piezas a <b>${minN}</b> como mínimo.
+    <button class="chip" style="margin-left:8px;margin-top:4px" onclick="$('p-N').value=${minN};syncSl('p-N','p-N-sl');calcP()">→ Usar ${minN} piezas</button>`;
+  } else {
+    warn.style.display='block';
+    warn.className='ok';
+    warn.innerHTML=`✓ La cuerda exterior (${ocCm.toFixed(0)} cm) cabe en la loseta de ${L} cm de largo`;
+  }
 
+  state={...state,R,W,L,A,N,cut,convex:isConvex};
   $('p-results').style.display='block';
 
-  // Stats
   const innerLabel=isConvex?'Lado piscina (corto)':'Lado terraza (corto)';
   const outerLabel=isConvex?'Lado terraza (largo)':'Lado piscina (largo)';
   $('th-inner').textContent=isConvex?'Lado piscina':'Lado terraza';
@@ -605,21 +651,20 @@ function calcP(){
     <div class="stat amber"><div class="n">${Math.round(oc)} mm</div><div class="d">${outerLabel}</div></div>
     <div class="stat red"><div class="n">${Math.round(diff)} mm</div><div class="d">Diferencia int/ext</div></div>`;
 
-  // Table
   let rows='';
   for(let i=0;i<N;i++){
+    const fits=ocCm<=L;
     rows+=`<tr>
       <td><b>${i+1}</b></td>
       <td>${Math.round(ic)} mm</td>
-      <td>${Math.round(oc)} mm</td>
+      <td style="color:${fits?'inherit':'#B71C1C'};font-weight:${fits?400:700}">${Math.round(oc)} mm ${fits?'':'⚠️'}</td>
       <td>${Math.round(diff)} mm</td>
       <td>${cut.toFixed(2)}°</td>
     </tr>`;
   }
   $('p-tbody').innerHTML=rows;
 
-  // Tip
-  $('p-tip').innerHTML=`<b>Todas las piezas son idénticas.</b> Arco interior total: ${(arcI/10).toFixed(1)} cm. Corta N=${N} trapecios con ${cut.toFixed(2)}° en cada extremo.`;
+  $('p-tip').innerHTML=`<b>Todas las piezas son idénticas.</b> Arco interior total: ${(arcI/10).toFixed(1)} cm · Loseta: ${W*10}×${L*10} mm`;
 
   drawPiezas(R,W,A,N);
 }
