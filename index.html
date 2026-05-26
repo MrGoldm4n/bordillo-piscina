@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bordillo">
+<meta name="theme-color" content="#0D3D6E">
+<title>Bordillo Piscina</title>
+<style>
+:root{
+  --blue:#1565C0;--blue2:#0D3D6E;--blue-l:#E3F0FF;--blue-m:#5B9BD5;
+  --green:#2E7D32;--green-l:#E8F5E9;
+  --amber:#E65100;--amber-l:#FFF3E0;
+  --red:#B71C1C;--red-l:#FFEBEE;
+  --gray:#455A64;--gray-l:#ECEFF1;
+  --bg:#F0F4F8;--card:#fff;--text:#1A2332;--muted:#607080;
+  --border:rgba(0,0,0,0.1);--radius:14px;--rsm:9px;
+  --shadow:0 2px 8px rgba(0,0,0,0.10);
+  --font:'DM Sans',system-ui,sans-serif;
+}
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow-x:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);max-width:700px;margin:0 auto;display:flex;flex-direction:column;min-height:100vh}
+
+/* ── HEADER ── */
+.hdr{background:linear-gradient(135deg,var(--blue2) 0%,var(--blue) 100%);color:#fff;padding:env(safe-area-inset-top,0) 0 0;position:sticky;top:0;z-index:50;box-shadow:0 2px 12px rgba(0,0,0,0.25)}
+.hdr-top{padding:14px 18px 0;display:flex;align-items:center;gap:10px}
+.hdr-icon{font-size:22px}
+.hdr-title{font-size:17px;font-weight:700;letter-spacing:-0.3px}
+.hdr-sub{font-size:11px;opacity:.7;margin-top:1px}
+.tabs{display:flex;margin-top:10px}
+.tab{flex:1;padding:11px 4px;border:none;background:none;color:rgba(255,255,255,.55);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;letter-spacing:.3px;transition:all .15s;text-transform:uppercase}
+.tab.on{color:#fff;border-bottom-color:#fff}
+
+/* ── CONTENT ── */
+.body{flex:1;padding:14px;overflow-y:auto}
+.sec{display:none}.sec.on{display:block}
+
+/* ── CARDS ── */
+.card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.card-sub{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px}
+
+/* ── FORM ── */
+.field{margin-bottom:10px}
+.field-label{font-size:12px;color:var(--muted);font-weight:500;margin-bottom:4px;display:block}
+.field-row{display:flex;align-items:center;gap:8px}
+.field-row input[type=range]{flex:1;accent-color:var(--blue)}
+.num{width:76px;padding:8px 6px;border:1.5px solid var(--border);border-radius:var(--rsm);font-size:15px;font-weight:600;text-align:center;font-family:'DM Mono',monospace;color:var(--text);background:var(--bg)}
+.num:focus{outline:none;border-color:var(--blue)}
+.unit{font-size:12px;color:var(--muted);min-width:24px}
+
+/* ── RESULT BIG ── */
+.res-big{background:linear-gradient(135deg,var(--blue2),var(--blue));border-radius:var(--radius);padding:16px;text-align:center;margin:12px 0;color:#fff}
+.res-num{font-size:44px;font-weight:700;font-family:'DM Mono',monospace;line-height:1}
+.res-lbl{font-size:12px;opacity:.8;margin-top:4px}
+
+/* ── FORMULA BOX ── */
+.formula{background:var(--gray-l);border-radius:var(--rsm);padding:10px 14px;font-family:'DM Mono',monospace;font-size:13px;color:var(--gray);margin:8px 0;text-align:center;letter-spacing:.3px}
+
+/* ── STATS ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
+.stat{background:var(--gray-l);border-radius:var(--rsm);padding:9px 11px}
+.stat .n{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text)}
+.stat .d{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.3}
+.stat.blue{background:var(--blue-l)}.stat.blue .n{color:var(--blue2)}
+.stat.green{background:var(--green-l)}.stat.green .n{color:var(--green)}
+.stat.amber{background:var(--amber-l)}.stat.amber .n{color:var(--amber)}
+.stat.red{background:var(--red-l)}.stat.red .n{color:var(--red)}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:var(--rsm);font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:var(--font);transition:opacity .15s,transform .1s}
+.btn:active{opacity:.75;transform:scale(.98)}
+.btn-primary{background:var(--blue);color:#fff;width:100%;padding:13px}
+.btn-ghost{background:var(--gray-l);color:var(--gray)}
+.btn-green{background:var(--green-l);color:var(--green);width:100%;padding:11px}
+.btn-row{display:flex;gap:8px;margin-top:8px}
+
+/* ── EXAMPLES ── */
+.ex-label{font-size:11px;color:var(--muted);margin:8px 0 5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.chip{padding:5px 11px;background:var(--blue-l);color:var(--blue2);border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:none;font-family:var(--font)}
+.chip:active{opacity:.7}
+
+/* ── TOGGLE ── */
+.toggle{display:flex;background:var(--gray-l);border-radius:var(--rsm);padding:3px;gap:3px;margin:8px 0}
+.tgl{flex:1;padding:9px 6px;border:none;background:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);font-family:var(--font);transition:all .15s;text-align:center}
+.tgl.on{background:var(--blue);color:#fff}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto;margin:8px 0;border-radius:var(--rsm)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{background:var(--blue2);color:#fff;padding:8px 10px;text-align:left;font-weight:600;white-space:nowrap}
+thead th:first-child{border-radius:var(--rsm) 0 0 0}
+thead th:last-child{border-radius:0 var(--rsm) 0 0}
+tbody td{padding:8px 10px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;white-space:nowrap}
+tbody tr:nth-child(even) td{background:var(--gray-l)}
+tbody tr:last-child td{border-bottom:none}
+
+/* ── TIPS ── */
+.tip{background:var(--amber-l);border-left:3px solid var(--amber);border-radius:0 var(--rsm) var(--rsm) 0;padding:10px 12px;font-size:12px;color:var(--amber);margin:8px 0;line-height:1.6}
+.tip b{font-weight:700}
+.info{background:var(--blue-l);border-left:3px solid var(--blue-m);border-radius:0 var(--rsm) var(--rsm) 0;padding:10px 12px;font-size:12px;color:var(--blue2);margin:8px 0;line-height:1.6}
+.ok{background:var(--green-l);border-left:3px solid var(--green);border-radius:0 var(--rsm) var(--rsm) 0;padding:10px 12px;font-size:12px;color:var(--green);margin:8px 0;line-height:1.6}
+.err{color:var(--red);font-size:12px;margin-top:4px}
+
+/* ── SVG diagrams ── */
+svg.diag{width:100%;border-radius:var(--rsm);display:block;margin:8px 0}
+
+/* ── STEP PILL ── */
+.step-pill{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:var(--blue);color:#fff;border-radius:50%;font-size:11px;font-weight:700;margin-right:4px;flex-shrink:0}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:var(--border);margin:12px 0}
+
+/* ── SAFE AREA ── */
+.safe{height:max(env(safe-area-inset-bottom,0px),16px)}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-top">
+    <span class="hdr-icon">🏊</span>
+    <div><div class="hdr-title">Bordillo de Piscina</div><div class="hdr-sub">Calculadora de cortes para esquinas curvas</div></div>
+  </div>
+  <div class="tabs">
+    <button class="tab on" onclick="showTab(0)">📐 Radio</button>
+    <button class="tab" onclick="showTab(1)">📏 Ángulo</button>
+    <button class="tab" onclick="showTab(2)">🧱 Piezas</button>
+    <button class="tab" onclick="showTab(3)">✂️ Recorte</button>
+  </div>
+</div>
+
+<div class="body">
+
+<!-- ═══════════ TAB 0: RADIO ═══════════ -->
+<div class="sec on" id="s0">
+
+  <div class="card">
+    <div class="card-title">¿Qué es el radio?</div>
+    <div class="card-sub">El radio R es la distancia desde el centro imaginario del arco hasta el borde interior de la piscina. Se calcula midiendo dos valores sobre el propio arco: la <b>Cuerda (C)</b> y la <b>Flecha (S)</b>.</div>
+    <svg class="diag" viewBox="0 0 340 180" id="svg-radio-explain"></svg>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Cómo medir en obra</div>
+    <div class="card-sub">
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px"><span class="step-pill">1</span><span>Tensa un cordel recto de <b>punta a punta</b> de la curva (puntos A y B). Mide esa longitud → <b style="color:var(--red)">C</b></span></div>
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px"><span class="step-pill">2</span><span>Desde el <b>punto central</b> del cordel, mide perpendicularmente hasta el borde del arco → <b style="color:var(--green)">S</b></span></div>
+      <div style="display:flex;align-items:flex-start;gap:8px"><span class="step-pill">3</span><span>Introduce C y S abajo para obtener R</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔢 Calcular Radio</div>
+    <div class="formula">R = C² ÷ (8 × S) + S ÷ 2</div>
+
+    <div class="ex-label">Ejemplos rápidos</div>
+    <div class="chips" id="radio-chips"></div>
+
+    <div class="field">
+      <label class="field-label">C — Cuerda (cm)</label>
+      <div class="field-row">
+        <input type="range" min="10" max="500" value="279" id="r-C-sl" oninput="syncN('r-C-sl','r-C');calcR()">
+        <input type="number" class="num" id="r-C" value="279" oninput="syncSl('r-C','r-C-sl');calcR()">
+        <span class="unit">cm</span>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">S — Flecha (cm)</label>
+      <div class="field-row">
+        <input type="range" min="1" max="100" value="38" id="r-S-sl" oninput="syncN('r-S-sl','r-S');calcR()">
+        <input type="number" class="num" id="r-S" value="38" oninput="syncSl('r-S','r-S-sl');calcR()">
+        <span class="unit">cm</span>
+      </div>
+    </div>
+
+    <div class="res-big" id="res-radio">
+      <div class="res-num" id="r-result">—</div>
+      <div class="res-lbl">Radio interior R</div>
+    </div>
+    <div class="err" id="r-err"></div>
+
+    <button class="btn btn-green" onclick="useRadio()">✓ Usar este radio en Piezas →</button>
+  </div>
+
+</div>
+
+<!-- ═══════════ TAB 1: ÁNGULO ═══════════ -->
+<div class="sec" id="s1">
+
+  <div class="card">
+    <div class="card-title">¿Qué es el ángulo de giro?</div>
+    <div class="card-sub">Es el número de grados que cambia la dirección del bordillo al pasar de un tramo recto al siguiente. Se mide extendiendo las dos líneas rectas hasta que se cruzan en el punto V.</div>
+    <svg class="diag" viewBox="0 0 340 200" id="svg-ang-explain"></svg>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Cómo medir en obra</div>
+    <div class="card-sub">
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px"><span class="step-pill">1</span><span>Extiende un cordel largo por cada tramo recto hasta que ambos se <b>crucen en V</b></span></div>
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px"><span class="step-pill">2</span><span>Desde V, marca los puntos <b>A</b> (en cordel 1, a distancia L1) y <b>B</b> (en cordel 2, a distancia L2). Pon L1 = L2 para mayor facilidad</span></div>
+      <div style="display:flex;align-items:flex-start;gap:8px"><span class="step-pill">3</span><span>Mide la distancia <b style="color:var(--red)">AB</b> entre esos dos puntos</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔢 Calcular Ángulo de Giro</div>
+    <div class="formula">θ = arccos( (L1² + L2² − AB²) / (2·L1·L2) )</div>
+
+    <div class="ex-label">Ejemplos rápidos</div>
+    <div class="chips" id="ang-chips"></div>
+
+    <div class="field">
+      <label class="field-label">L1 — distancia V → A (cm)</label>
+      <div class="field-row">
+        <input type="range" min="20" max="400" value="150" id="a-L1-sl" oninput="syncN('a-L1-sl','a-L1');calcA()">
+        <input type="number" class="num" id="a-L1" value="150" oninput="syncSl('a-L1','a-L1-sl');calcA()">
+        <span class="unit">cm</span>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">L2 — distancia V → B (cm)</label>
+      <div class="field-row">
+        <input type="range" min="20" max="400" value="150" id="a-L2-sl" oninput="syncN('a-L2-sl','a-L2');calcA()">
+        <input type="number" class="num" id="a-L2" value="150" oninput="syncSl('a-L2','a-L2-sl');calcA()">
+        <span class="unit">cm</span>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">AB — distancia entre A y B (cm)</label>
+      <div class="field-row">
+        <input type="range" min="5" max="400" value="145" id="a-AB-sl" oninput="syncN('a-AB-sl','a-AB');calcA()">
+        <input type="number" class="num" id="a-AB" value="145" oninput="syncSl('a-AB','a-AB-sl');calcA()">
+        <span class="unit">cm</span>
+      </div>
+    </div>
+
+    <div class="res-big">
+      <div class="res-num" id="a-result">—</div>
+      <div class="res-lbl">Ángulo de giro θ</div>
+    </div>
+    <div class="err" id="a-err"></div>
+    <button class="btn btn-green" onclick="useAngulo()">✓ Usar este ángulo en Piezas →</button>
+  </div>
+
+</div>
+
+<!-- ═══════════ TAB 2: PIEZAS ═══════════ -->
+<div class="sec" id="s2">
+
+  <div class="card">
+    <div class="card-title">🔢 Parámetros</div>
+
+    <div class="ex-label">Tipo de curva</div>
+    <div class="toggle" id="toggle-convex">
+      <button class="tgl on" onclick="setConvex(true,this)">⬆ Convexa — esquina exterior<br><small style="font-weight:400">Piscina curva hacia afuera</small></button>
+      <button class="tgl" onclick="setConvex(false,this)">⬇ Cóncava — esquina interior<br><small style="font-weight:400">Piscina curva hacia adentro</small></button>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Radio interior R (cm) <span id="p-R-tag" style="color:var(--blue);font-size:10px"></span></label>
+      <div class="field-row">
+        <input type="range" min="30" max="600" value="276" id="p-R-sl" oninput="syncN('p-R-sl','p-R');calcP()">
+        <input type="number" class="num" id="p-R" value="276" oninput="syncSl('p-R','p-R-sl');calcP()">
+        <span class="unit">cm</span>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Ancho de la loseta (cm)</label>
+      <div class="field-row">
+        <input type="range" min="20" max="100" value="50" id="p-W-sl" oninput="syncN('p-W-sl','p-W');calcP()">
+        <input type="number" class="num" id="p-W" value="50" oninput="syncSl('p-W','p-W-sl');calcP()">
+        <span class="unit">cm</span>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Ángulo de giro total <span id="p-A-tag" style="color:var(--blue);font-size:10px"></span></label>
+      <div class="field-row">
+        <input type="range" min="5" max="180" value="56" id="p-A-sl" oninput="syncN('p-A-sl','p-A');calcP()">
+        <input type="number" class="num" id="p-A" value="56" oninput="syncSl('p-A','p-A-sl');calcP()">
+        <span class="unit">°</span>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Número de piezas</label>
+      <div class="field-row">
+        <input type="range" min="2" max="12" value="6" id="p-N-sl" oninput="syncN('p-N-sl','p-N');calcP()">
+        <input type="number" class="num" id="p-N" value="6" oninput="syncSl('p-N','p-N-sl');calcP()">
+        <span class="unit">pzas</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="p-results" style="display:none">
+    <div class="card-title">📊 Resultados</div>
+    <div class="grid4" id="p-stats"></div>
+
+    <div class="divider"></div>
+    <div class="card-title" style="margin-bottom:8px">Medidas por pieza</div>
+    <div class="tbl-wrap"><table id="p-table">
+      <thead><tr><th>Pieza</th><th id="th-inner">Lado piscina</th><th id="th-outer">Lado terraza</th><th>Diferencia</th><th>Corte</th></tr></thead>
+      <tbody id="p-tbody"></tbody>
+    </table></div>
+
+    <div class="tip" id="p-tip"></div>
+
+    <div class="divider"></div>
+    <div class="card-title" style="margin-bottom:8px">Diagrama a escala</div>
+    <svg class="diag" viewBox="0 0 340 220" id="svg-piezas"></svg>
+
+    <button class="btn btn-green" onclick="useRecorte()" style="margin-top:8px">✂️ Ver cómo marcar el corte en la loseta →</button>
+  </div>
+
+</div>
+
+<!-- ═══════════ TAB 3: RECORTE ═══════════ -->
+<div class="sec" id="s3">
+
+  <div class="card">
+    <div class="card-title">¿Qué es el recorte?</div>
+    <div class="card-sub">Cada loseta se corta en forma de trapecio. Para marcar el corte en la loseta, necesitas saber cuántos mm hay que desplazar la línea de corte de un lado al otro. Ese desplazamiento es <b>X</b>.<br><br>En un extremo marcas 0 mm y en el extremo opuesto marcas X mm. La línea que une esos dos puntos es la línea de corte.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔢 Calcular Recorte</div>
+    <div class="formula">X = Ancho × tan(ángulo de corte)</div>
+
+    <div class="field">
+      <label class="field-label">Ancho de la loseta (mm) <span id="rc-W-tag" style="color:var(--blue);font-size:10px"></span></label>
+      <div class="field-row">
+        <input type="range" min="100" max="1000" value="500" id="rc-W-sl" oninput="syncN('rc-W-sl','rc-W');calcRC()">
+        <input type="number" class="num" id="rc-W" value="500" oninput="syncSl('rc-W','rc-W-sl');calcRC()">
+        <span class="unit">mm</span>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Ángulo de corte por extremo (°) <span id="rc-A-tag" style="color:var(--blue);font-size:10px"></span></label>
+      <div class="field-row">
+        <input type="range" min="0.5" max="45" step="0.01" value="4.67" id="rc-A-sl" oninput="syncN('rc-A-sl','rc-A');calcRC()">
+        <input type="number" class="num" id="rc-A" value="4.67" step="0.01" oninput="syncSl('rc-A','rc-A-sl');calcRC()">
+        <span class="unit">°</span>
+      </div>
+    </div>
+
+    <div class="ex-label">Tipo de esquina</div>
+    <div class="toggle" id="toggle-rc">
+      <button class="tgl on" onclick="setRcConvex(true,this)">⬆ Convexa</button>
+      <button class="tgl" onclick="setRcConvex(false,this)">⬇ Cóncava</button>
+    </div>
+
+    <div class="res-big">
+      <div class="res-num" id="rc-result">—</div>
+      <div class="res-lbl">X — Desplazamiento de corte</div>
+    </div>
+
+    <div class="card-title" style="margin:12px 0 8px">Diagrama de marcado</div>
+    <svg class="diag" viewBox="0 0 340 260" id="svg-recorte"></svg>
+
+    <div class="ok" id="rc-instruc"></div>
+    <div class="tip" id="rc-tip">
+      <b>Proceso en obra:</b> Pon la loseta en la sierra. Marca 0 mm en una esquina del extremo y X mm en la esquina opuesta del mismo extremo. Traza la línea de corte entre esos dos puntos. Corta. Gira 180° y repite para el otro extremo.
+    </div>
+  </div>
+
+</div>
+
+<div class="safe"></div>
+</div><!-- /body -->
+
+<script>
+// ── UTILS ──
+const $=id=>document.getElementById(id);
+function syncN(slId,nId){$(nId).value=$(slId).value}
+function syncSl(nId,slId){const v=+$(nId).value,s=$(slId);if(v>=+s.min&&v<=+s.max)s.value=v}
+function showTab(i){
+  document.querySelectorAll('.sec').forEach((s,j)=>s.classList.toggle('on',i===j));
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('on',i===j));
+}
+
+// ── SHARED STATE ──
+let state={R:276,A:56,W:50,N:6,convex:true,cut:0};
+
+// ── SVG HELPERS ──
+function svgText(x,y,txt,opts={}){
+  const{fill='#607080',size=10,weight=400,anchor='middle',mono=false}=opts;
+  return `<text x="${x}" y="${y}" text-anchor="${anchor}" fill="${fill}" font-size="${size}" font-weight="${weight}" font-family="${mono?'DM Mono,monospace':'DM Sans,sans-serif'}">${txt}</text>`;
+}
+function svgLine(x1,y1,x2,y2,stroke='#ccc',sw=1,dash=''){
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${sw}" ${dash?`stroke-dasharray="${dash}"`:''}/>`
+}
+function arrow(){
+  return `<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>`;
+}
+function dimLine(x1,y1,x2,y2,label,col='#607080'){
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="1" marker-end="url(#ar)" marker-start="url(#ar)"/>
+  <rect x="${((x1+x2)/2-label.length*3.2).toFixed(1)}" y="${((y1+y2)/2-8).toFixed(1)}" width="${(label.length*6.5).toFixed(1)}" height="14" rx="3" fill="white"/>
+  ${svgText((x1+x2)/2,(y1+y2)/2+4,label,{fill:col,size:10,weight:600,mono:true})}`;
+}
+
+// ── TAB 0: RADIO ──
+function drawRadioExplain(){
+  const svg=$('svg-radio-explain');
+  const cx=170,cy=150,R=120,A=50;
+  const rad=Math.PI/180;
+  const a1=-90*rad, a2=(-90+A)*rad;
+  const ix1=cx+R*Math.cos(a1),iy1=cy+R*Math.sin(a1);
+  const ix2=cx+R*Math.cos(a2),iy2=cy+R*Math.sin(a2);
+  const mx=(ix1+ix2)/2,my=(iy1+iy2)/2;
+  const amid=(-90+A/2)*rad;
+  const arcX=cx+R*Math.cos(amid),arcY=cy+R*Math.sin(amid);
+  const foot_t=((arcX-ix1)*(ix2-ix1)+(arcY-iy1)*(iy2-iy1))/((ix2-ix1)**2+(iy2-iy1)**2);
+  const fx=ix1+foot_t*(ix2-ix1),fy=iy1+foot_t*(iy2-iy1);
+
+  svg.innerHTML=arrow()+
+  `<path d="M${ix1},${iy1} A${R},${R} 0 0,1 ${ix2},${iy2}" fill="none" stroke="#BBDEFB" stroke-width="18" stroke-linecap="round"/>` +
+  svgLine(ix1,iy1,ix2,iy2,'#B71C1C',2,'6 4')+
+  svgLine(arcX,arcY,fx,fy,'#2E7D32',2)+
+  `<circle cx="${ix1}" cy="${iy1}" r="5" fill="#B71C1C"/>` +
+  `<circle cx="${ix2}" cy="${iy2}" r="5" fill="#B71C1C"/>` +
+  `<circle cx="${arcX}" cy="${arcY}" r="5" fill="#2E7D32"/>` +
+  `<circle cx="${fx}" cy="${fy}" r="4" fill="#2E7D32"/>` +
+  svgText(mx,my-8,'C — Cuerda',{fill:'#B71C1C',size:11,weight:700})+
+  svgText((arcX+fx)/2+22,(arcY+fy)/2+4,'S',{fill:'#2E7D32',size:11,weight:700})+
+  svgText(ix1-4,iy1+14,'A',{fill:'#B71C1C',size:10,weight:600,anchor:'middle'})+
+  svgText(ix2+4,iy2-6,'B',{fill:'#B71C1C',size:10,weight:600,anchor:'middle'})+
+  svgText(arcX+8,arcY-6,'Punto medio del arco',{fill:'#2E7D32',size:9,anchor:'start'})+
+  svgText(85,30,'Piscina',{fill:'#1565C0',size:10,weight:600})+
+  `<path d="M${cx},${cy} L${ix1},${iy1} A${R},${R} 0 0,1 ${ix2},${iy2} Z" fill="#E3F0FF" opacity="0.5"/>`;
+}
+
+const radioExamples=[
+  {label:'Tu piscina (foto)',C:279.5,S:38},
+  {label:'Radio 90 cm',C:80,S:15},
+  {label:'Radio 150 cm',C:120,S:12},
+  {label:'Radio 50 cm',C:60,S:18},
+];
+
+function initRadioChips(){
+  const c=$('radio-chips');
+  radioExamples.forEach(ex=>{
+    const b=document.createElement('button');
+    b.className='chip'; b.textContent=ex.label;
+    b.onclick=()=>{$('r-C').value=ex.C;$('r-S').value=ex.S;syncSl('r-C','r-C-sl');syncSl('r-S','r-S-sl');calcR()};
+    c.appendChild(b);
+  });
+}
+
+function calcR(){
+  const C=+$('r-C').value,S=+$('r-S').value;
+  if(!C||!S||S<=0){$('r-result').textContent='—';$('r-err').textContent='';return}
+  if(C<=0){$('r-err').textContent='C debe ser mayor que 0';return}
+  const R=(C*C)/(8*S)+S/2;
+  $('r-result').textContent=R.toFixed(1)+' cm';
+  $('r-err').textContent='';
+  state.R=R;
+}
+
+function useRadio(){
+  const v=+$('r-C').value; if(!v)return;
+  const C=+$('r-C').value,S=+$('r-S').value;
+  const R=(C*C)/(8*S)+S/2;
+  $('p-R').value=R.toFixed(1);syncSl('p-R','p-R-sl');
+  $('p-R-tag').textContent='← desde Radio';
+  state.R=R;calcP();showTab(2);
+}
+
+// ── TAB 1: ÁNGULO ──
+function drawAngExplain(){
+  const svg=$('svg-ang-explain');
+  const Vx=170,Vy=170,L=110,theta=56*Math.PI/180;
+  const a1=(270)*Math.PI/180;
+  const a2=(270-56)*Math.PI/180;
+  const A1x=Vx+L*Math.cos(a1),A1y=Vy+L*Math.sin(a1);
+  const A2x=Vx+L*Math.cos(a2),A2y=Vy+L*Math.sin(a2);
+  const ext=150;
+  const E1x=Vx+ext*Math.cos(a1+Math.PI),E1y=Vy+ext*Math.sin(a1+Math.PI);
+  const E2x=Vx+ext*Math.cos(a2+Math.PI),E2y=Vy+ext*Math.sin(a2+Math.PI);
+
+  svg.innerHTML=arrow()+
+  `<path d="M${E1x},${E1y} L${Vx},${Vy} L${E2x},${E2y}" fill="none" stroke="#ccc" stroke-width="1.5" stroke-dasharray="5 4"/>` +
+  `<line x1="${Vx}" y1="${Vy}" x2="${A1x}" y2="${A1y}" stroke="#B71C1C" stroke-width="2.5"/>` +
+  `<line x1="${Vx}" y1="${Vy}" x2="${A2x}" y2="${A2y}" stroke="#B71C1C" stroke-width="2.5"/>` +
+  `<line x1="${A1x}" y1="${A1y}" x2="${A2x}" y2="${A2y}" stroke="#E65100" stroke-width="1.5" stroke-dasharray="6 4"/>` +
+  `<circle cx="${Vx}" cy="${Vy}" r="5" fill="#B71C1C"/>` +
+  `<circle cx="${A1x}" cy="${A1y}" r="5" fill="#1565C0"/>` +
+  `<circle cx="${A2x}" cy="${A2y}" r="5" fill="#1565C0"/>` +
+  svgText(Vx+8,Vy-8,'V',{fill:'#B71C1C',size:12,weight:700,anchor:'start'})+
+  svgText(A1x+6,A1y+4,'A',{fill:'#1565C0',size:12,weight:700,anchor:'start'})+
+  svgText(A2x-6,A2y+4,'B',{fill:'#1565C0',size:12,weight:700,anchor:'end'})+
+  svgText((A1x+A2x)/2,(A1y+A2y)/2-8,'AB',{fill:'#E65100',size:11,weight:700})+
+  svgText(Vx-26,Vy+20,'L1',{fill:'#B71C1C',size:10,weight:600})+
+  svgText(Vx+14,Vy-20,'L2',{fill:'#B71C1C',size:10,weight:600})+
+  `<path d="M${Vx+0},${Vy-30} A30,30 0 0,0 ${Vx+25},${Vy-18}" fill="none" stroke="#B71C1C" stroke-width="1.5"/>` +
+  svgText(Vx+32,Vy-28,'θ',{fill:'#B71C1C',size:13,weight:700})+
+  svgText(E1x+4,E1y-4,'Tramo 1',{fill:'#607080',size:9,anchor:'start'})+
+  svgText(E2x-4,E2y-4,'Tramo 2',{fill:'#607080',size:9,anchor:'end'});
+}
+
+const angExamples=[
+  {label:'56° (foto)',L1:150,L2:150,AB:145},
+  {label:'45°',L1:200,L2:200,AB:153},
+  {label:'90°',L1:150,L2:150,AB:212},
+  {label:'30°',L1:200,L2:200,AB:103},
+];
+
+function initAngChips(){
+  const c=$('ang-chips');
+  angExamples.forEach(ex=>{
+    const b=document.createElement('button');
+    b.className='chip'; b.textContent=ex.label;
+    b.onclick=()=>{$('a-L1').value=ex.L1;$('a-L2').value=ex.L2;$('a-AB').value=ex.AB;
+      ['a-L1','a-L2','a-AB'].forEach(id=>syncSl(id,id+'-sl'));calcA()};
+    c.appendChild(b);
+  });
+}
+
+function calcA(){
+  const L1=+$('a-L1').value,L2=+$('a-L2').value,AB=+$('a-AB').value;
+  $('a-err').textContent='';
+  if(!L1||!L2||!AB){$('a-result').textContent='—';return}
+  const cosT=(L1*L1+L2*L2-AB*AB)/(2*L1*L2);
+  if(cosT<-1||cosT>1){$('a-err').textContent='Medidas incompatibles: revisa los valores';$('a-result').textContent='—';return}
+  const theta=Math.acos(cosT)*180/Math.PI;
+  $('a-result').textContent=theta.toFixed(1)+'°';
+  state.A=theta;
+}
+
+function useAngulo(){
+  const L1=+$('a-L1').value,L2=+$('a-L2').value,AB=+$('a-AB').value;
+  if(!L1||!L2||!AB)return;
+  const cosT=(L1*L1+L2*L2-AB*AB)/(2*L1*L2);
+  if(cosT<-1||cosT>1)return;
+  const theta=Math.acos(cosT)*180/Math.PI;
+  $('p-A').value=theta.toFixed(1);syncSl('p-A','p-A-sl');
+  $('p-A-tag').textContent='← desde Ángulo';
+  state.A=theta;calcP();showTab(2);
+}
+
+// ── TAB 2: PIEZAS ──
+let isConvex=true;
+function setConvex(v,el){
+  isConvex=v;
+  document.querySelectorAll('#toggle-convex .tgl').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');calcP();
+}
+
+function calcP(){
+  const R=+$('p-R').value||276;
+  const W=+$('p-W').value||50;
+  const A=+$('p-A').value||56;
+  const N=+$('p-N').value||6;
+  const Ro=R+W;
+  const apa=A/N;
+  const cut=apa/2;
+  const halfRad=cut*Math.PI/180;
+  const ic=2*R*Math.sin(halfRad)*10; // mm
+  const oc=2*Ro*Math.sin(halfRad)*10; // mm
+  const diff=oc-ic;
+  const arcI=R*(A*Math.PI/180)*10; // mm inner arc
+
+  state={...state,R,W,A,N,cut,convex:isConvex};
+
+  $('p-results').style.display='block';
+
+  // Stats
+  const innerLabel=isConvex?'Lado piscina (corto)':'Lado terraza (corto)';
+  const outerLabel=isConvex?'Lado terraza (largo)':'Lado piscina (largo)';
+  $('th-inner').textContent=isConvex?'Lado piscina':'Lado terraza';
+  $('th-outer').textContent=isConvex?'Lado terraza':'Lado piscina';
+
+  $('p-stats').innerHTML=`
+    <div class="stat blue"><div class="n">${cut.toFixed(2)}°</div><div class="d">Corte cada extremo</div></div>
+    <div class="stat green"><div class="n">${Math.round(ic)} mm</div><div class="d">${innerLabel}</div></div>
+    <div class="stat amber"><div class="n">${Math.round(oc)} mm</div><div class="d">${outerLabel}</div></div>
+    <div class="stat red"><div class="n">${Math.round(diff)} mm</div><div class="d">Diferencia int/ext</div></div>`;
+
+  // Table
+  let rows='';
+  for(let i=0;i<N;i++){
+    rows+=`<tr>
+      <td><b>${i+1}</b></td>
+      <td>${Math.round(ic)} mm</td>
+      <td>${Math.round(oc)} mm</td>
+      <td>${Math.round(diff)} mm</td>
+      <td>${cut.toFixed(2)}°</td>
+    </tr>`;
+  }
+  $('p-tbody').innerHTML=rows;
+
+  // Tip
+  $('p-tip').innerHTML=`<b>Todas las piezas son idénticas.</b> Arco interior total: ${(arcI/10).toFixed(1)} cm. Corta N=${N} trapecios con ${cut.toFixed(2)}° en cada extremo.`;
+
+  drawPiezas(R,W,A,N);
+}
+
+function drawPiezas(R,W,A,N){
+  const svg=$('svg-piezas');
+  const Ro=R+W,apa=A/N,rad=Math.PI/180;
+  const halfRad=apa/2*rad;
+
+  // Bounding box
+  let mnX=1e9,mxX=-1e9,mnY=1e9,mxY=-1e9;
+  for(let i=0;i<=N;i++){
+    const a=(-90+i*apa)*rad;
+    [R,Ro].forEach(r=>{
+      const x=r*Math.cos(a),y=r*Math.sin(a);
+      if(x<mnX)mnX=x;if(x>mxX)mxX=x;if(y<mnY)mnY=y;if(y>mxY)mxY=y;
+    });
+  }
+  const margin=38,vW=340,vH=220;
+  const sc=Math.min((vW-margin*2)/(mxX-mnX),(vH-margin*2)/(mxY-mnY));
+  const cx=margin-mnX*sc,cy=margin-mnY*sc;
+  const px=v=>(cx+v*sc).toFixed(1);
+  const py=v=>(cy+v*sc).toFixed(1);
+
+  const fills=['#E3F0FF','#E8F5E9','#FFF3E0','#FCE4EC','#E0F2F1','#EDE7F6','#FBE9E7','#F1F8E9'];
+  const strks=['#1565C0','#2E7D32','#E65100','#880E4F','#004D40','#4527A0','#BF360C','#33691E'];
+
+  let s=arrow();
+
+  // Pool fill
+  let poolPts=`${px(0)},0 ${vW},0 ${vW},${py((-90+A)*rad<0?R*Math.sin((-90+A)*rad):0)} `;
+  for(let i=N;i>=0;i--){const a=(-90+i*apa)*rad;poolPts+=`${px(R*Math.cos(a))},${py(R*Math.sin(a))} `;}
+  s+=`<polygon points="${poolPts}" fill="#E3F0FF" opacity="0.6"/>`;
+  s+=svgText(cx+20,28,'Piscina',{fill:'#1565C0',size:10,weight:600});
+
+  // Tiles as trapezoids
+  for(let i=0;i<N;i++){
+    const a1=(-90+i*apa)*rad,a2=(-90+(i+1)*apa)*rad;
+    const pts=[
+      `${px(R*Math.cos(a1))},${py(R*Math.sin(a1))}`,
+      `${px(R*Math.cos(a2))},${py(R*Math.sin(a2))}`,
+      `${px(Ro*Math.cos(a2))},${py(Ro*Math.sin(a2))}`,
+      `${px(Ro*Math.cos(a1))},${py(Ro*Math.sin(a1))}`
+    ].join(' ');
+    s+=`<polygon points="${pts}" fill="${fills[i%fills.length]}" stroke="${strks[i%strks.length]}" stroke-width="1.5"/>`;
+    const lx=((+px(R*Math.cos(a1))+px(R*Math.cos(a2))+px(Ro*Math.cos(a1))+px(Ro*Math.cos(a2)))/4);
+    const ly=((+py(R*Math.sin(a1))+py(R*Math.sin(a2))+py(Ro*Math.sin(a1))+py(Ro*Math.sin(a2)))/4);
+    s+=svgText(lx,ly+4,i+1,{fill:strks[i%strks.length],size:11,weight:700});
+  }
+
+  // Annotations piece 1
+  const a1=-90*rad,a2=(-90+apa)*rad;
+  const ic=Math.round(2*R*Math.sin(halfRad)*10);
+  const oc2=Math.round(2*Ro*Math.sin(halfRad)*10);
+  // inner edge label
+  const imx=(+px(R*Math.cos(a1))+ +px(R*Math.cos(a2)))/2;
+  const imy=(+py(R*Math.sin(a1))+ +py(R*Math.sin(a2)))/2;
+  s+=`<rect x="${(imx-22).toFixed(1)}" y="${(imy+3).toFixed(1)}" width="46" height="13" rx="3" fill="white" opacity="0.9"/>`;
+  s+=svgText(imx,imy+13,ic+' mm',{fill:'#1565C0',size:9,weight:700,mono:true});
+  // outer edge label
+  const omx=(+px(Ro*Math.cos(a1))+ +px(Ro*Math.cos(a2)))/2;
+  const omy=(+py(Ro*Math.sin(a1))+ +py(Ro*Math.sin(a2)))/2;
+  s+=`<rect x="${(omx-22).toFixed(1)}" y="${(omy-16).toFixed(1)}" width="46" height="13" rx="3" fill="white" opacity="0.9"/>`;
+  s+=svgText(omx,omy-6,oc2+' mm',{fill:'#2E7D32',size:9,weight:700,mono:true});
+
+  // Scale bar 50cm
+  const barPx=50*sc;
+  const bx=vW-margin-barPx,by=vH-8;
+  s+=`<line x1="${bx}" y1="${by}" x2="${bx+barPx}" y2="${by}" stroke="#607080" stroke-width="1.5"/>`;
+  s+=`<line x1="${bx}" y1="${by-4}" x2="${bx}" y2="${by+4}" stroke="#607080" stroke-width="1.5"/>`;
+  s+=`<line x1="${bx+barPx}" y1="${by-4}" x2="${bx+barPx}" y2="${by+4}" stroke="#607080" stroke-width="1.5"/>`;
+  s+=svgText(bx+barPx/2,by-6,'50 cm',{fill:'#607080',size:9,mono:true});
+
+  // Terraza label
+  const midA=(-90+A/2)*rad;
+  s+=svgText(+px(Ro*Math.cos(midA))+8,+py(Ro*Math.sin(midA))+4,'Terraza',{fill:'#607080',size:10,weight:600,anchor:'start'});
+
+  svg.innerHTML=s;
+}
+
+// ── TAB 3: RECORTE ──
+let rcConvex=true;
+function setRcConvex(v,el){
+  rcConvex=v;
+  document.querySelectorAll('#toggle-rc .tgl').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');calcRC();
+}
+
+function calcRC(){
+  const W=+$('rc-W').value||500;
+  const alpha=+$('rc-A').value||4.67;
+  const X=W*Math.tan(alpha*Math.PI/180);
+  $('rc-result').textContent=X.toFixed(1)+' mm';
+
+  const poolSide=rcConvex?'interior (piscina)':'exterior (terraza)';
+  const terSide=rcConvex?'exterior (terraza)':'interior (piscina)';
+  $('rc-instruc').innerHTML=
+    `<b>Extremo A (y extremo B igual pero espejado):</b><br>
+     • Marca <b>0 mm</b> en el borde <b>${poolSide}</b><br>
+     • Marca <b>${X.toFixed(1)} mm</b> en el borde <b>${terSide}</b><br>
+     • Traza la línea de corte entre esos dos puntos`;
+
+  drawRecorte(W,alpha,X);
+}
+
+function useRecorte(){
+  const cut=state.cut||4.67;
+  const W=(state.W||50)*10;
+  $('rc-A').value=cut.toFixed(2);$('rc-W').value=W;
+  syncSl('rc-A','rc-A-sl');syncSl('rc-W','rc-W-sl');
+  $('rc-A-tag').textContent='← desde Piezas';
+  $('rc-W-tag').textContent='← desde Piezas';
+  rcConvex=state.convex;
+  document.querySelectorAll('#toggle-rc .tgl').forEach((t,i)=>t.classList.toggle('on',(rcConvex&&i===0)||(!rcConvex&&i===1)));
+  calcRC();showTab(3);
+}
+
+function drawRecorte(W,alpha,X){
+  const svg=$('svg-recorte');
+  // W in mm, display in proportion
+  // Tile face: width W (across border), height = some length (use 500mm as reference)
+  const tileLen=500; // display height of tile in mm
+  const vW=340,vH=260;
+  const margin=50;
+  const scX=(vW-margin*2)/Math.max(W,600);
+  const scY=(vH-margin*2)/tileLen;
+  const sc=Math.min(scX,scY,0.5);
+  const tW=W*sc,tH=tileLen*sc;
+  const tx=(vW-tW)/2,ty=(vH-tH)/2;
+
+  // convex: outer(terraza) longer = RIGHT side of tile (outer is at right, inner is at left)
+  // The tile is drawn vertically: top=pool edge, bottom=terraza edge (for convex)
+  // Actually let's draw it with the "width" (W) as horizontal, "length" as vertical
+  // Top of tile = inner(pool) for convex, outer(terraza) for concave
+  // Bottom of tile = outer(terraza) for convex, inner(pool) for concave
+
+  const innerLabel=rcConvex?'Borde PISCINA':'Borde TERRAZA';
+  const outerLabel=rcConvex?'Borde TERRAZA':'Borde PISCINA';
+
+  // Tile rectangle (grey background)
+  // Trapezoid: Top edge shorter, bottom edge longer (for convex)
+  // X = offset: 0 at inner side, X mm at outer side
+
+  // Draw tile as seen from above (plan view)
+  // Horizontal = along pool edge direction
+  // Vertical = across pool edge (inner to outer)
+  // Left end: top-left (inner) at y=ty, bottom-left (outer) at y=ty+tH
+  // Trapezoid: inner edge shorter
+  // At left end: cut goes from (tx + X*sc, ty) to (tx, ty+tH)    [inner is right of center, outer is left]
+  // Wait, let me think of it differently:
+  //
+  // The tile is W mm wide (top to bottom = pool to terraza)
+  // The tile has some length (left to right = along pool edge)
+  // Left cut: from (innerLeft, outerLeft+X) if convex → outer longer
+  //
+  // Actually simplest: draw the tile rect, then show the trapezoid inside it
+
+  const tileW2=Math.min(W*sc*1.1+X*sc*1.2,vW-margin*2);
+  const startX=(vW-tileW2)/2;
+
+  const innerH=ty; // top row y (inner/pool side for convex)
+  const outerH=ty+tH; // bottom row y (outer/terraza side for convex)
+  const Xpx=X*sc;
+
+  // Source tile rect
+  let s=arrow();
+  s+=`<rect x="${startX.toFixed(1)}" y="${ty.toFixed(1)}" width="${tileW2.toFixed(1)}" height="${tH.toFixed(1)}" fill="#ECEFF1" stroke="#B0BEC5" stroke-width="1" stroke-dasharray="5 3" rx="3"/>`;
+  s+=svgText(vW/2,ty-6,'Loseta original',{fill:'#90A4AE',size:9,weight:600});
+
+  // Trapezoid: for convex, inner(top) is shorter, outer(bottom) is longer
+  // Left end cut: (startX + Xpx, innerH) → (startX, outerH)
+  // Right end cut (mirror): (startX + tileW2 - Xpx, innerH) → (startX + tileW2, outerH)
+  const tlx=startX+Xpx, tly=innerH;
+  const trx=startX+tileW2-Xpx, tryy=innerH;
+  const blx=startX, bly=outerH;
+  const brx=startX+tileW2, bry=outerH;
+
+  s+=`<polygon points="${tlx.toFixed(1)},${tly.toFixed(1)} ${trx.toFixed(1)},${tryy.toFixed(1)} ${brx.toFixed(1)},${bry.toFixed(1)} ${blx.toFixed(1)},${bly.toFixed(1)}" fill="#E3F0FF" stroke="#1565C0" stroke-width="2"/>`;
+
+  // Cut lines (red dashed)
+  s+=svgLine(startX,innerH,tlx,outerH,'#B71C1C',1.5,'5 3');
+  s+=svgLine(startX+tileW2,innerH,trx+Xpx,outerH,'#B71C1C',1.5,'5 3');
+
+  // Dimension: X at left end
+  const midLeftX=(startX+tlx)/2,midLeftY=(innerH+outerH)/2;
+  // Xpx horizontal span at top-left cut
+  s+=`<line x1="${startX.toFixed(1)}" y1="${(innerH-12).toFixed(1)}" x2="${tlx.toFixed(1)}" y2="${(innerH-12).toFixed(1)}" stroke="#B71C1C" stroke-width="1" marker-end="url(#ar)" marker-start="url(#ar)"/>`;
+  s+=`<rect x="${((startX+tlx)/2-14).toFixed(1)}" y="${(innerH-22).toFixed(1)}" width="28" height="13" rx="3" fill="white"/>`;
+  s+=svgText((startX+tlx)/2,innerH-13,'X mm',{fill:'#B71C1C',size:9,weight:700,mono:true});
+
+  // Zero marks at inner corners
+  s+=svgText(tlx,innerH-4,'0',{fill:'#1565C0',size:9,weight:700,anchor:'middle'});
+  s+=svgText(trx,innerH-4,'0',{fill:'#1565C0',size:9,weight:700,anchor:'middle'});
+
+  // X marks at outer corners
+  s+=svgText(startX,outerH+12,`X=${X.toFixed(1)}`,{fill:'#E65100',size:9,weight:700,anchor:'middle',mono:true});
+  s+=svgText(startX+tileW2,outerH+12,`X=${X.toFixed(1)}`,{fill:'#E65100',size:9,weight:700,anchor:'middle',mono:true});
+
+  // Width dimension (left side)
+  s+=dimLine(startX-16,innerH,startX-16,outerH,W+'mm','#2E7D32');
+
+  // Inner/Outer labels
+  s+=svgText(vW/2,innerH-18,innerLabel,{fill:rcConvex?'#1565C0':'#2E7D32',size:10,weight:700});
+  s+=svgText(vW/2,outerH+24,outerLabel,{fill:rcConvex?'#2E7D32':'#1565C0',size:10,weight:700});
+
+  // Corner markers (dots)
+  [[tlx,tly],[trx,tryy],[brx,bry],[blx,bly]].forEach(([x,y])=>{
+    s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="#1565C0"/>`;
+  });
+
+  // Alpha angle arc at top-left corner
+  const angPx=20;
+  s+=`<path d="M${(tlx+angPx).toFixed(1)},${innerH} A${angPx},${angPx} 0 0,0 ${(startX+angPx*Math.cos(Math.atan2(-(outerH-innerH),tlx-startX))).toFixed(1)},${(innerH+angPx*Math.sin(Math.atan2(-(outerH-innerH),tlx-startX))*-1).toFixed(1)}" fill="none" stroke="#B71C1C" stroke-width="1.2"/>`;
+  s+=svgText(tlx+28,innerH+12,alpha.toFixed(2)+'°',{fill:'#B71C1C',size:9,weight:700});
+
+  svg.innerHTML=s;
+}
+
+// ── INIT ──
+drawRadioExplain();
+drawAngExplain();
+initRadioChips();
+initAngChips();
+calcR();calcA();calcP();calcRC();
+
+// ── PWA SERVICE WORKER ──
+if('serviceWorker' in navigator){
+  const sw=`
+    const V='brd-v1';
+    self.addEventListener('install',e=>self.skipWaiting());
+    self.addEventListener('activate',e=>self.clients.claim());
+    self.addEventListener('fetch',e=>{
+      if(e.request.method!=='GET')return;
+      e.respondWith(caches.open(V).then(c=>c.match(e.request).then(r=>{
+        if(r)return r;
+        return fetch(e.request).then(nr=>{c.put(e.request,nr.clone());return nr}).catch(()=>r);
+      })));
+    });
+  `;
+  try{
+    const b=new Blob([sw],{type:'application/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(b)).catch(()=>{});
+  }catch(e){}
+}
+</script>
+</body>
+</html>
