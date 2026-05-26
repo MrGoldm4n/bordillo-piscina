@@ -121,6 +121,21 @@ svg.diag{width:100%;border-radius:var(--rsm);display:block;margin:8px 0}
 
 /* ── SAFE AREA ── */
 .safe{height:max(env(safe-area-inset-bottom,0px),16px)}
+
+/* ── EXPORT BUTTON ── */
+.btn-export{background:linear-gradient(135deg,#0D3D6E,#1565C0);color:#fff;width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:var(--rsm);border:none;cursor:pointer;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font)}
+.btn-export:active{opacity:.8}
+
+/* ── PRINT STYLES ── */
+#print-view{display:none}
+@media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  html,body{height:auto;background:white;max-width:none}
+  .hdr,.body,.safe{display:none!important}
+  #print-view{display:block!important;font-family:'DM Sans',system-ui,sans-serif;color:#1A2332;padding:0;margin:0}
+  @page{margin:12mm;size:A4 portrait}
+  .pv-page-break{page-break-before:always}
+}
 </style>
 </head>
 <body>
@@ -367,6 +382,14 @@ svg.diag{width:100%;border-radius:var(--rsm);display:block;margin:8px 0}
     <div class="ok" id="rc-instruc"></div>
     <div class="tip" id="rc-tip">
       <b>Proceso en obra:</b> Pon la loseta en la sierra. Marca 0 mm en una esquina del extremo y X mm en la esquina opuesta del mismo extremo. Traza la línea de corte entre esos dos puntos. Corta. Gira 180° y repite para el otro extremo.
+    </div>
+
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">📄 Exportar informe</div>
+      <button class="btn-export" onclick="exportPDF()">
+        📄 Generar PDF con todos los datos
+      </button>
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">Se abrirá el diálogo de impresión → Guardar como PDF</div>
     </div>
   </div>
 
@@ -840,6 +863,218 @@ if('serviceWorker' in navigator){
     const b=new Blob([sw],{type:'application/javascript'});
     navigator.serviceWorker.register(URL.createObjectURL(b)).catch(()=>{});
   }catch(e){}
+}
+
+// ── EXPORT PDF ──
+function exportPDF(){
+  const R=+$('p-R').value||276;
+  const W=+$('p-W').value||50;
+  const A=+$('p-A').value||56;
+  const N=+$('p-N').value||6;
+  const Ro=R+W;
+  const apa=A/N;
+  const cut=apa/2;
+  const halfRad=cut*Math.PI/180;
+  const ic=Math.round(2*R*Math.sin(halfRad)*10);
+  const oc=Math.round(2*Ro*Math.sin(halfRad)*10);
+  const diff=oc-ic;
+  const arcI=(R*(A*Math.PI/180)*10/10).toFixed(1);
+  const rcW=+$('rc-W').value||500;
+  const rcAlpha=+$('rc-A').value||4.67;
+  const X=(rcW*Math.tan(rcAlpha*Math.PI/180)).toFixed(1);
+  const tipo=isConvex?'Convexa (esquina exterior)':'Cóncava (esquina interior)';
+  const innerLabel=isConvex?'Lado piscina (corto)':'Lado terraza (corto)';
+  const outerLabel=isConvex?'Lado terraza (largo)':'Lado piscina (largo)';
+  const fecha=new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  // Generate SVG for pieces (larger, for print)
+  const svgP=generatePrintPiezas(R,W,A,N);
+  const svgR=generatePrintRecorte(rcW,rcAlpha,X);
+
+  // Build table rows
+  let rows='';
+  for(let i=0;i<N;i++){
+    rows+=`<tr style="background:${i%2?'#f8f8f8':'white'}">
+      <td style="padding:7px 10px;border-bottom:1px solid #e0e0e0;font-weight:700">${i+1}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #e0e0e0;font-family:monospace">${ic} mm</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #e0e0e0;font-family:monospace">${oc} mm</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #e0e0e0;font-family:monospace">${diff} mm</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #e0e0e0;font-family:monospace;color:#B71C1C;font-weight:700">${cut.toFixed(2)}°</td>
+    </tr>`;
+  }
+
+  const pv=document.createElement('div');
+  pv.id='print-view';
+  pv.innerHTML=`
+  <div style="max-width:780px;margin:0 auto;font-family:system-ui,sans-serif;color:#1A2332">
+
+    <!-- HEADER -->
+    <div style="background:linear-gradient(135deg,#0D3D6E,#1565C0);color:white;padding:20px 24px;border-radius:8px;margin-bottom:18px">
+      <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px">🏊 Bordillo Piscina — Informe de Corte</div>
+      <div style="font-size:12px;opacity:.8;margin-top:4px">Generado el ${fecha} · Todas las medidas en mm salvo indicación</div>
+    </div>
+
+    <!-- PARAMS + RESULTS side by side -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+      <!-- PARAMS -->
+      <div style="background:#F0F4F8;border-radius:8px;padding:14px">
+        <div style="font-size:12px;font-weight:800;color:#0D3D6E;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">📐 Parámetros</div>
+        <table style="width:100%;font-size:13px;border-collapse:collapse">
+          <tr><td style="color:#607080;padding:4px 0">Radio interior R</td><td style="font-weight:700;font-family:monospace;text-align:right">${R} cm</td></tr>
+          <tr><td style="color:#607080;padding:4px 0">Radio exterior</td><td style="font-weight:700;font-family:monospace;text-align:right">${Ro} cm</td></tr>
+          <tr><td style="color:#607080;padding:4px 0">Ancho loseta</td><td style="font-weight:700;font-family:monospace;text-align:right">${W*10} mm</td></tr>
+          <tr><td style="color:#607080;padding:4px 0">Ángulo de giro</td><td style="font-weight:700;font-family:monospace;text-align:right">${A}°</td></tr>
+          <tr><td style="color:#607080;padding:4px 0">Nº de piezas</td><td style="font-weight:700;font-family:monospace;text-align:right">${N} piezas</td></tr>
+          <tr><td style="color:#607080;padding:4px 0">Tipo de curva</td><td style="font-weight:700;text-align:right">${tipo}</td></tr>
+        </table>
+      </div>
+      <!-- RESULTS -->
+      <div style="background:#F0F4F8;border-radius:8px;padding:14px">
+        <div style="font-size:12px;font-weight:800;color:#0D3D6E;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">📊 Resultados clave</div>
+        <table style="width:100%;font-size:13px;border-collapse:collapse">
+          <tr><td style="color:#607080;padding:4px 0">Arco interior total</td><td style="font-weight:700;font-family:monospace;text-align:right">${arcI} cm</td></tr>
+          <tr><td style="color:#607080;padding:4px 0">Ángulo corte/extremo</td><td style="font-weight:800;font-family:monospace;text-align:right;color:#B71C1C;font-size:15px">${cut.toFixed(2)}°</td></tr>
+          <tr><td style="color:#607080;padding:4px 0">${innerLabel}</td><td style="font-weight:700;font-family:monospace;text-align:right;color:#1565C0">${ic} mm</td></tr>
+          <tr><td style="color:#607080;padding:4px 0">${outerLabel}</td><td style="font-weight:700;font-family:monospace;text-align:right;color:#2E7D32">${oc} mm</td></tr>
+          <tr><td style="color:#607080;padding:4px 0">Diferencia int/ext</td><td style="font-weight:700;font-family:monospace;text-align:right;color:#E65100">${diff} mm</td></tr>
+          <tr><td style="color:#607080;padding:4px 0">Recorte X por extremo</td><td style="font-weight:800;font-family:monospace;text-align:right;color:#B71C1C;font-size:15px">${X} mm</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- FORMULA -->
+    <div style="background:#EDE7F6;border-radius:8px;padding:10px 16px;margin-bottom:16px;text-align:center;font-family:monospace;font-size:13px;color:#4527A0;font-weight:600">
+      R = C² ÷ (8×S) + S÷2 &nbsp;|&nbsp; θ = arccos((L1²+L2²−AB²)/(2·L1·L2)) &nbsp;|&nbsp; X = Ancho × tan(α)
+    </div>
+
+    <!-- PIECES TABLE -->
+    <div style="margin-bottom:18px">
+      <div style="font-size:12px;font-weight:800;color:#0D3D6E;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🧱 Tabla de piezas — todas idénticas</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:#0D3D6E;color:white">
+            <th style="padding:8px 10px;text-align:left;border-radius:6px 0 0 0">Pieza</th>
+            <th style="padding:8px 10px;text-align:left">${innerLabel}</th>
+            <th style="padding:8px 10px;text-align:left">${outerLabel}</th>
+            <th style="padding:8px 10px;text-align:left">Diferencia</th>
+            <th style="padding:8px 10px;text-align:left;border-radius:0 6px 0 0">Corte</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+
+    <!-- DIAGRAMS -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">
+      <div>
+        <div style="font-size:12px;font-weight:800;color:#0D3D6E;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Vista superior a escala</div>
+        <div style="background:#F0F4F8;border-radius:8px;padding:8px">${svgP}</div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:800;color:#0D3D6E;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Marcado de corte en loseta</div>
+        <div style="background:#F0F4F8;border-radius:8px;padding:8px">${svgR}</div>
+      </div>
+    </div>
+
+    <!-- INSTRUCTIONS -->
+    <div style="background:#E8F5E9;border-left:4px solid #2E7D32;border-radius:0 8px 8px 0;padding:14px 16px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:800;color:#1B5E20;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">✂️ Instrucciones de corte en obra</div>
+      <ol style="margin-left:18px;font-size:13px;color:#1B5E20;line-height:1.8">
+        <li>Coloca la loseta en la sierra con el <b>${isConvex?'borde de piscina':'borde de terraza'}</b> hacia ti</li>
+        <li>En el <b>extremo A</b>: marca <b>0 mm</b> en el borde ${isConvex?'piscina':'terraza'} y <b>${X} mm</b> en el borde ${isConvex?'terraza':'piscina'}</li>
+        <li>Traza la línea de corte uniendo esos dos puntos → corta con la sierra</li>
+        <li>Gira la pieza <b>180° sobre el eje largo</b> y repite el proceso para el extremo B</li>
+        <li>Resultado: trapecio con ${ic} mm interior y ${oc} mm exterior</li>
+        <li>Todas las <b>${N} piezas son idénticas</b> — mismo ángulo (${cut.toFixed(2)}°) en todos los cortes</li>
+      </ol>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="text-align:center;font-size:10px;color:#90A4AE;padding-top:8px;border-top:1px solid #e0e0e0">
+      Bordillo Piscina PWA · Generado el ${fecha} · github.com/MrGoldm4n/bordillo-piscina
+    </div>
+  </div>`;
+
+  // Replace or add print view
+  const existing=document.getElementById('print-view');
+  if(existing) existing.remove();
+  document.body.appendChild(pv);
+  window.print();
+  setTimeout(()=>pv.remove(),2000);
+}
+
+function generatePrintPiezas(R,W,A,N){
+  const Ro=R+W,apa=A/N,rad=Math.PI/180;
+  let mnX=1e9,mxX=-1e9,mnY=1e9,mxY=-1e9;
+  for(let i=0;i<=N;i++){
+    const a=(-90+i*apa)*rad;
+    [R,Ro].forEach(r=>{
+      const x=r*Math.cos(a),y=r*Math.sin(a);
+      if(x<mnX)mnX=x;if(x>mxX)mxX=x;if(y<mnY)mnY=y;if(y>mxY)mxY=y;
+    });
+  }
+  const margin=30,vW=300,vH=200;
+  const sc=Math.min((vW-margin*2)/(mxX-mnX),(vH-margin*2)/(mxY-mnY));
+  const cx=margin-mnX*sc,cy=margin-mnY*sc;
+  const px=v=>(cx+v*sc).toFixed(1),py=v=>(cy+v*sc).toFixed(1);
+  const fills=['#E3F0FF','#E8F5E9','#FFF3E0','#FCE4EC','#E0F2F1','#EDE7F6','#FBE9E7','#F1F8E9'];
+  const strks=['#1565C0','#2E7D32','#E65100','#880E4F','#004D40','#4527A0','#BF360C','#33691E'];
+  let s=`<svg width="100%" viewBox="0 0 ${vW} ${vH}" xmlns="http://www.w3.org/2000/svg">`;
+  // Pool fill
+  let pp=`M${px(0)},0 ${vW},0 ${vW},${vH} `;
+  for(let i=N;i>=0;i--){const a=(-90+i*apa)*rad;pp+=`${px(R*Math.cos(a))},${py(R*Math.sin(a))} `;}
+  s+=`<polygon points="${pp}" fill="#E3F0FF" opacity="0.5"/>`;
+  s+=`<text x="${+px(0)+10}" y="18" font-size="10" fill="#1565C0" font-weight="700" font-family="system-ui">Piscina</text>`;
+  for(let i=0;i<N;i++){
+    const a1=(-90+i*apa)*rad,a2=(-90+(i+1)*apa)*rad;
+    const pts=`${px(R*Math.cos(a1))},${py(R*Math.sin(a1))} ${px(R*Math.cos(a2))},${py(R*Math.sin(a2))} ${px(Ro*Math.cos(a2))},${py(Ro*Math.sin(a2))} ${px(Ro*Math.cos(a1))},${py(Ro*Math.sin(a1))}`;
+    s+=`<polygon points="${pts}" fill="${fills[i%fills.length]}" stroke="${strks[i%strks.length]}" stroke-width="1.5"/>`;
+    const lx=((+px(R*Math.cos(a1))+ +px(R*Math.cos(a2))+ +px(Ro*Math.cos(a1))+ +px(Ro*Math.cos(a2)))/4).toFixed(1);
+    const ly=((+py(R*Math.sin(a1))+ +py(R*Math.sin(a2))+ +py(Ro*Math.sin(a1))+ +py(Ro*Math.sin(a2)))/4+4).toFixed(1);
+    s+=`<text x="${lx}" y="${ly}" text-anchor="middle" font-size="10" fill="${strks[i%strks.length]}" font-weight="700" font-family="system-ui">${i+1}</text>`;
+  }
+  // Scale bar
+  const barPx=50*sc,bx=vW-margin-barPx,by=vH-6;
+  s+=`<line x1="${bx}" y1="${by}" x2="${bx+barPx}" y2="${by}" stroke="#607080" stroke-width="1.5"/>`;
+  s+=`<line x1="${bx}" y1="${by-3}" x2="${bx}" y2="${by+3}" stroke="#607080" stroke-width="1.5"/>`;
+  s+=`<line x1="${bx+barPx}" y1="${by-3}" x2="${bx+barPx}" y2="${by+3}" stroke="#607080" stroke-width="1.5"/>`;
+  s+=`<text x="${bx+barPx/2}" y="${by-5}" text-anchor="middle" font-size="8" fill="#607080" font-family="monospace">50 cm</text>`;
+  // Angle
+  const halfRad2=apa/2*Math.PI/180;
+  const ic2=Math.round(2*R*Math.sin(halfRad2)*10),oc2=Math.round(2*Ro*Math.sin(halfRad2)*10);
+  const a1_=-90*Math.PI/180,a2_=(-90+apa)*Math.PI/180;
+  const omx=(+px(Ro*Math.cos(a1_))+ +px(Ro*Math.cos(a2_)))/2,omy=(+py(Ro*Math.sin(a1_))+ +py(Ro*Math.sin(a2_)))/2;
+  s+=`<rect x="${(omx-20).toFixed(1)}" y="${(omy-15).toFixed(1)}" width="40" height="12" rx="2" fill="white" opacity=".85"/>`;
+  s+=`<text x="${omx.toFixed(1)}" y="${(omy-7).toFixed(1)}" text-anchor="middle" font-size="8" fill="#2E7D32" font-weight="700" font-family="monospace">${oc2}mm</text>`;
+  const imx=(+px(R*Math.cos(a1_))+ +px(R*Math.cos(a2_)))/2,imy=(+py(R*Math.sin(a1_))+ +py(R*Math.sin(a2_)))/2;
+  s+=`<rect x="${(imx-20).toFixed(1)}" y="${(imy+3).toFixed(1)}" width="40" height="12" rx="2" fill="white" opacity=".85"/>`;
+  s+=`<text x="${imx.toFixed(1)}" y="${(imy+12).toFixed(1)}" text-anchor="middle" font-size="8" fill="#1565C0" font-weight="700" font-family="monospace">${ic2}mm</text>`;
+  s+=`</svg>`;
+  return s;
+}
+
+function generatePrintRecorte(W,alpha,X){
+  const vW=300,vH=220,margin=44;
+  const tileLen=500,sc2=Math.min((vW-margin*2)/Math.max(W,600),(vH-margin*2)/tileLen,0.42);
+  const tW=W*sc2,tH=tileLen*sc2,Xpx=parseFloat(X)*sc2;
+  const startX=(vW-tW)/2,ty=(vH-tH)/2;
+  const innerH=ty,outerH=ty+tH;
+  const tlx=startX+Xpx,trx=startX+tW-Xpx,blx=startX,brx=startX+tW;
+  let s=`<svg width="100%" viewBox="0 0 ${vW} ${vH}" xmlns="http://www.w3.org/2000/svg">`;
+  s+=`<rect x="${startX.toFixed(1)}" y="${ty.toFixed(1)}" width="${tW.toFixed(1)}" height="${tH.toFixed(1)}" fill="#ECEFF1" stroke="#B0BEC5" stroke-width="1" stroke-dasharray="4 3" rx="3"/>`;
+  s+=`<polygon points="${tlx.toFixed(1)},${innerH.toFixed(1)} ${trx.toFixed(1)},${innerH.toFixed(1)} ${brx.toFixed(1)},${outerH.toFixed(1)} ${blx.toFixed(1)},${outerH.toFixed(1)}" fill="#E3F0FF" stroke="#1565C0" stroke-width="2"/>`;
+  s+=`<line x1="${startX.toFixed(1)}" y1="${innerH.toFixed(1)}" x2="${tlx.toFixed(1)}" y2="${outerH.toFixed(1)}" stroke="#B71C1C" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+  s+=`<line x1="${(startX+tW).toFixed(1)}" y1="${innerH.toFixed(1)}" x2="${(trx+Xpx).toFixed(1)}" y2="${outerH.toFixed(1)}" stroke="#B71C1C" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+  [[tlx,innerH],[trx,innerH],[brx,outerH],[blx,outerH]].forEach(([x,y])=>{s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="#1565C0"/>`;});
+  s+=`<text x="${(vW/2).toFixed(1)}" y="${(innerH-10).toFixed(1)}" text-anchor="middle" font-size="9" fill="#1565C0" font-weight="700" font-family="system-ui">${isConvex?'PISCINA':'TERRAZA'} → 0 mm</text>`;
+  s+=`<text x="${(vW/2).toFixed(1)}" y="${(outerH+16).toFixed(1)}" text-anchor="middle" font-size="9" fill="#2E7D32" font-weight="700" font-family="system-ui">${isConvex?'TERRAZA':'PISCINA'} → X = ${X} mm</text>`;
+  s+=`<line x1="${startX.toFixed(1)}" y1="${(innerH-18).toFixed(1)}" x2="${tlx.toFixed(1)}" y2="${(innerH-18).toFixed(1)}" stroke="#B71C1C" stroke-width="1"/>`;
+  s+=`<text x="${((startX+tlx)/2).toFixed(1)}" y="${(innerH-20).toFixed(1)}" text-anchor="middle" font-size="9" fill="#B71C1C" font-weight="700" font-family="monospace">X=${X}mm</text>`;
+  s+=`<text x="${(startX-4).toFixed(1)}" y="${((innerH+outerH)/2+4).toFixed(1)}" text-anchor="end" font-size="8" fill="#2E7D32" font-weight="700" font-family="monospace">${W}mm</text>`;
+  s+=`<line x1="${(startX-10).toFixed(1)}" y1="${innerH.toFixed(1)}" x2="${(startX-10).toFixed(1)}" y2="${outerH.toFixed(1)}" stroke="#2E7D32" stroke-width="1"/>`;
+  s+=`<text x="${(vW/2).toFixed(1)}" y="${(vH-4).toFixed(1)}" text-anchor="middle" font-size="8" fill="#607080" font-family="monospace">α = ${alpha}° cada extremo</text>`;
+  s+=`</svg>`;
+  return s;
 }
 </script>
 </body>
